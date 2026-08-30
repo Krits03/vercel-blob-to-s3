@@ -178,12 +178,12 @@ export default function Home() {
       )}
 
       <footer style={{ marginTop: 60, textAlign: "center", fontSize: 12, color: "#999", borderTop: "1px solid #eee", paddingTop: 16 }}>
-        <p style={{ margin: "0 0 4px" }}>
+        <p style={{ margin: 0 }}>
           <a href="https://github.com/Krits03/vercel-blob-to-s3/" target="_blank" rel="noreferrer" style={{ color: "#0070f3", textDecoration: "none" }}>
-            https://github.com/Krits03/vercel-blob-to-s3/
+            GitHub
           </a>
+          <span style={{ margin: "0 4px" }}>Made by Krits03</span>
         </p>
-        <p style={{ margin: 0 }}>作者：Krits03</p>
       </footer>
     </main>
   );
