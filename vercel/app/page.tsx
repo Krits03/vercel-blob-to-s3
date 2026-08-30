@@ -86,7 +86,7 @@ export default function Home() {
 
   return (
     <main style={{ maxWidth: 560, margin: "60px auto", fontFamily: "system-ui, sans-serif" }}>
-      <h1>Twikoo Blob 图床</h1>
+      <h1>Vercel Blob 图床</h1>
       <p style={{ color: "#666" }}>简单上传 / 下载，后端 Vercel Blob</p>
 
       <div style={{ marginBottom: 16 }}>
@@ -176,6 +176,15 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <footer style={{ marginTop: 60, textAlign: "center", fontSize: 12, color: "#999", borderTop: "1px solid #eee", paddingTop: 16 }}>
+        <p style={{ margin: "0 0 4px" }}>
+          <a href="https://github.com/Krits03/vercel-blob-to-s3/" target="_blank" rel="noreferrer" style={{ color: "#0070f3", textDecoration: "none" }}>
+            https://github.com/Krits03/vercel-blob-to-s3/
+          </a>
+        </p>
+        <p style={{ margin: 0 }}>作者：Krits03</p>
+      </footer>
     </main>
   );
 }
