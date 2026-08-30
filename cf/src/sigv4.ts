@@ -26,18 +26,18 @@ function textEncoder() {
   return new TextEncoder();
 }
 
-async function hmacSha256(key: ArrayBuffer, data: string): Promise<ArrayBuffer> {
+async function hmacSha256(key: ArrayBufferLike, data: string): Promise<ArrayBuffer> {
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    key,
+    key as BufferSource,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  return crypto.subtle.sign("HMAC", cryptoKey, textEncoder().encode(data));
+  return (await crypto.subtle.sign("HMAC", cryptoKey, textEncoder().encode(data))) as ArrayBuffer;
 }
 
-async function hmacSha256Hex(key: ArrayBuffer, data: string): Promise<string> {
+async function hmacSha256Hex(key: ArrayBufferLike, data: string): Promise<string> {
   const buf = await hmacSha256(key, data);
   return bufToHex(buf);
 }
@@ -117,7 +117,10 @@ export async function verifySignature(
   const payloadHash =
     request.headers.get("x-amz-content-sha256") ?? "UNSIGNED-PAYLOAD";
 
-  const signedHeaders = signedHeadersRaw.split(";").map((h) => h.trim());
+  const signedHeaders = signedHeadersRaw
+    .split(";")
+    .map((h) => h.trim())
+    .sort();
 
   const method = request.method.toUpperCase();
   const url = new URL(request.url);
@@ -129,7 +132,7 @@ export async function verifySignature(
     const value = canonicalHeaderValue(request.headers.get(name) ?? "");
     canonicalHeaders += `${name}:${value}\n`;
   }
-  const signedHeadersString = [...signedHeaders].sort().join(";");
+  const signedHeadersString = signedHeaders.join(";");
 
   const body = await request.arrayBuffer();
   if (payloadHash !== "UNSIGNED-PAYLOAD") {

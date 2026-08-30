@@ -1,7 +1,14 @@
 import { put } from "@vercel/blob";
+import { timingSafeEqual } from "node:crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function safeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
+}
 
 /**
  * 简单上传接口（非 S3 协议）。
@@ -28,7 +35,7 @@ function checkAuth(request: Request): boolean {
   const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : "";
   const url = new URL(request.url);
   const queryToken = url.searchParams.get("token") ?? "";
-  return bearer === token || queryToken === token;
+  return safeCompare(bearer, token) || safeCompare(queryToken, token);
 }
 
 export async function POST(request: Request) {

@@ -30,12 +30,11 @@ export default function Home() {
     try {
       const form = new FormData();
       form.append("file", file);
-      form.append("path", path);
 
       const res = await fetch(`/api/upload?path=${encodeURIComponent(path)}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: file,
+        body: form,
       });
 
       if (!res.ok) {
@@ -43,8 +42,6 @@ export default function Home() {
         throw new Error(body.error ?? `上传失败: ${res.status}`);
       }
 
-      // 重新用 multipart 上传以获取正确 contentType（raw body 用 query name）
-      // 这里直接用 raw body 模式
       const data: UploadResult = await res.json();
       setResult(data);
     } catch (e) {
