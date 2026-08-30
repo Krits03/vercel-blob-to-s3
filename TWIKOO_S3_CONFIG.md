@@ -117,24 +117,26 @@ true
 ### S3_CDN_URL
 
 ```
-https://blob.example.com/api/download/comments
+https://blob.example.com/api/download
 ```
 
 **最关键的一项！** 这是图片显示时浏览器加载的 URL 基础地址。
 
 > **为什么不能留空？** 如果留空，Twikoo 会用 `{S3_ENDPOINT}/{S3_BUCKET}/{key}` 作为图片 URL（如 `https://blob.example.com/s3/comments/images/twikoo/xxx.jpg`）。但网关的 S3 GET 接口**需要 SigV4 签名认证**，浏览器 `<img>` 标签无法携带签名头，图片将无法加载（返回 403）。
 >
-> **正确做法**：指向网关的简单下载接口 `/api/download/{S3_BUCKET}`，该接口无需认证，会 302 重定向到 Vercel Blob CDN。
+> **正确做法**：指向网关的简单下载接口 `/api/download`（不含 bucket），该接口无需认证，会 302 重定向到 Vercel Blob CDN。
+
+> **重要说明**：Twikoo 使用的 `@aws-sdk/client-s3` 在 `endpoint` 包含路径前缀（如 `https://域名/s3`）时，上传请求的 URL 会变成 `{endpoint}/{key}`，**bucket 不会被拼入路径**。因此 Blob 中的实际存储路径是 `{S3_PATH_PREFIX}/{文件名}`，不包含 `S3_BUCKET`。`S3_CDN_URL` 也应不含 bucket。
 
 Twikoo 构造的图片显示 URL 为：
 ```
 {S3_CDN_URL}/{key}
-= https://blob.example.com/api/download/comments/{S3_PATH_PREFIX}/{文件名}
+= https://blob.example.com/api/download/{S3_PATH_PREFIX}/{文件名}
 ```
 
-网关的下载接口收到 `/api/download/comments/images/twikoo/xxx.jpg` 后，用 `comments/images/twikoo/xxx.jpg` 作为 Blob 路径查询，302 重定向到 Vercel Blob 公开 CDN 地址。浏览器自动跟随重定向加载图片。
+网关的下载接口收到 `/api/download/images/twikoo/xxx.jpg` 后，用 `images/twikoo/xxx.jpg` 作为 Blob 路径查询，302 重定向到 Vercel Blob 公开 CDN 地址。浏览器自动跟随重定向加载图片。
 
-**规则**：`S3_CDN_URL = https://<域名>/api/download/<S3_BUCKET 的值>`
+**规则**：`S3_CDN_URL = https://<域名>/api/download`
 
 ---
 
@@ -148,9 +150,11 @@ images/twikoo
 
 最终图片在 Vercel Blob 中的完整路径为：
 ```
-{S3_BUCKET}/{S3_PATH_PREFIX}/{文件名}
-= comments/images/twikoo/20260830-abc123.jpg
+{S3_PATH_PREFIX}/{文件名}
+= images/twikoo/20260830-abc123.jpg
 ```
+
+> **注意**：由于 `@aws-sdk/client-s3` 在 endpoint 含路径前缀时不将 bucket 拼入上传路径，Blob 中的实际存储路径不包含 `S3_BUCKET`。`S3_BUCKET` 仅在签名校验时参与签名计算。
 
 ---
 
@@ -167,7 +171,7 @@ images/twikoo
 | S3_SECRET_ACCESS_KEY | `<你的 S3_SECRET_KEY>` |
 | S3_ENDPOINT | `https://blob.example.com/s3` |
 | S3_FORCE_PATH_STYLE | `true` |
-| S3_CDN_URL | `https://blob.example.com/api/download/comments` |
+| S3_CDN_URL | `https://blob.example.com/api/download` |
 | S3_PATH_PREFIX | `images/twikoo` |
 
 ---
@@ -180,8 +184,8 @@ images/twikoo
 
 - 图片上传成功，评论中显示图片
 - 浏览器开发者工具 → Network 中能看到：
-  1. 一个 `PUT` 请求到 `https://blob.example.com/s3/comments/images/twikoo/xxx.jpg`，返回 200
-  2. 一个 `GET` 请求到 `https://blob.example.com/api/download/comments/images/twikoo/xxx.jpg`，返回 302
+  1. 一个 `PUT` 请求到 `https://blob.example.com/s3/images/twikoo/xxx.jpg`，返回 200
+  2. 一个 `GET` 请求到 `https://blob.example.com/api/download/images/twikoo/xxx.jpg`，返回 302
   3. 浏览器跟随 302，从 Vercel Blob CDN 加载图片
 
 ### 2. 常见错误排查
@@ -190,7 +194,9 @@ images/twikoo
 |------|------|---------|
 | 上传返回 403 SignatureDoesNotMatch | `S3_ACCESS_KEY_ID` 或 `S3_SECRET_ACCESS_KEY` 与网关不一致 | 核对网关环境变量 `S3_ACCESS_KEY` / `S3_SECRET_KEY` |
 | 上传返回 403 请求缺少有效的 AWS4 签名头 | Twikoo 版本过低，不支持 S3 插件 | 升级 Twikoo >= 1.7.15 |
-| 上传成功但图片无法显示 (403) | `S3_CDN_URL` 留空，浏览器走了需要签名的 S3 GET 接口 | 设置 `S3_CDN_URL` 为 `https://<域名>/api/download/<S3_BUCKET>` |
+| 上传成功但图片无法显示 (403) | `S3_CDN_URL` 留空，浏览器走了需要签名的 S3 GET 接口 | 设置 `S3_CDN_URL` 为 `https://<域名>/api/download` |
+| 上传成功但图片无法显示 (404) | `S3_ENDPOINT` 缺少 `/s3` 前缀 | `S3_ENDPOINT` 设为 `https://<域名>/s3`（含 `/s3`） |
+| 上传成功但图片无法显示 (500) | `S3_CDN_URL` 含 bucket 前缀（如 `/api/download/comments`），与实际 Blob 存储路径不匹配 | `S3_CDN_URL` 改为 `https://<域名>/api/download`（不含 bucket） |
 | 上传成功但图片无法显示 (404) | `S3_CDN_URL` 路径与 `S3_BUCKET` 不匹配 | 确保 `S3_CDN_URL` 末尾的路径段与 `S3_BUCKET` 一致 |
 | 上传返回 500 InternalError | 网关未配置 `BLOB_READ_WRITE_TOKEN` 或 Vercel Blob 未连接 | 检查网关环境变量，确认 Blob Store 已连接 |
 | 上传返回 413 | 请求体超过平台限制 | Vercel: 4.5MB；CF Worker: 100MB。Twikoo 限制图片 10MB |
@@ -204,7 +210,7 @@ images/twikoo
 | | Vercel 版 | CF 版 |
 |---|-----------|-------|
 | S3_ENDPOINT | `https://<vercel域名>/s3` | `https://<worker域名>/s3` |
-| S3_CDN_URL | `https://<vercel域名>/api/download/comments` | `https://<worker域名>/api/download/comments` |
+| S3_CDN_URL | `https://<vercel域名>/api/download` | `https://<worker域名>/api/download` |
 | 密钥来源 | Vercel 环境变量 `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `wrangler secret put S3_ACCESS_KEY` / `S3_SECRET_KEY` |
 
 ---
