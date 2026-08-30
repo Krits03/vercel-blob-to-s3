@@ -21,14 +21,6 @@ function s3Error(code: string, message: string, status: number): Response {
   });
 }
 
-function missingConfig(): Response {
-  return s3Error(
-    "InternalError",
-    "S3_ACCESS_KEY / S3_SECRET_KEY 未配置",
-    500
-  );
-}
-
 async function authenticate(request: Request): Promise<ReturnType<typeof verifySignature>> {
   if (!ACCESS_KEY || !SECRET_KEY) throw new Error("S3 密钥未配置");
   return verifySignature(request, {

@@ -26,6 +26,18 @@ const app = new Hono<{ Bindings: Env }>();
 
 const JSON_HEADERS = { "content-type": "application/json" };
 
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const enc = new TextEncoder();
+  const bufA = enc.encode(a);
+  const bufB = enc.encode(b);
+  let diff = 0;
+  for (let i = 0; i < bufA.length; i++) {
+    diff |= bufA[i] ^ bufB[i];
+  }
+  return diff === 0;
+}
+
 // ---------------------------------------------------------------------------
 // Vercel Blob REST API 封装
 // ---------------------------------------------------------------------------
@@ -135,8 +147,8 @@ app.put("/s3/*", async (c) => {
     return s3Error("InternalError", "S3 密钥未配置", 500);
   }
 
-  // 从 /s3/{bucket}/{...key} 提取 bucket 与 key
-  const segments = c.req.path.replace(/^\/s3\//, "").split("/").filter(Boolean);
+  // 从 /s3/{bucket}/{...key} 提取 bucket 与 key（decode 避免双重编码）
+  const segments = decodeURIComponent(c.req.path.replace(/^\/s3\//, "")).split("/").filter(Boolean);
   const { bucket, key } = parseKey(segments);
   if (!key) return s3Error("InvalidArgument", "缺少对象 Key", 400);
 
@@ -248,7 +260,7 @@ app.post("/api/upload", async (c) => {
   const auth = c.req.header("authorization") ?? "";
   const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : "";
   const queryToken = c.req.query("token") ?? "";
-  if (bearer !== token && queryToken !== token) {
+  if (!safeCompare(bearer, token) && !safeCompare(queryToken, token)) {
     return c.json({ error: "未授权" }, 401, JSON_HEADERS);
   }
 
@@ -263,12 +275,13 @@ app.post("/api/upload", async (c) => {
 
   if (contentType.startsWith("multipart/form-data")) {
     const form = await c.req.formData();
-    const file = form.get("file");
-    if (!(file instanceof File)) {
+    const entry = form.get("file");
+    if (!entry || typeof entry === "string") {
       return c.json({ error: "缺少 file 字段" }, 400, JSON_HEADERS);
     }
+    const file = entry as unknown as File;
     fileName = file.name;
-    fileBody = file;
+    fileBody = file as BodyInit;
     fileContentType = file.type || "application/octet-stream";
   } else {
     const name = c.req.query("name");
@@ -301,7 +314,8 @@ app.post("/api/upload", async (c) => {
 
 app.get("/api/download/*", async (c) => {
   const env = c.env;
-  const blobKey = c.req.path.replace(/^\/api\/download\//, "");
+  // c.req.path 返回 URL 编码路径，需 decode 避免后续 encodeURIComponent 双重编码
+  const blobKey = decodeURIComponent(c.req.path.replace(/^\/api\/download\//, ""));
   if (!blobKey) return new Response("Not Found", { status: 404 });
 
   const info = await blobHead(env.BLOB_READ_WRITE_TOKEN, blobKey);

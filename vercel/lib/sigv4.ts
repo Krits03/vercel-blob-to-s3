@@ -89,12 +89,15 @@ export async function verifySignature(
   const payloadHash =
     request.headers.get("x-amz-content-sha256") ?? "UNSIGNED-PAYLOAD";
 
-  const signedHeaders = signedHeadersRaw.split(";").map((h) => h.trim());
+  const signedHeaders = signedHeadersRaw
+    .split(";")
+    .map((h) => h.trim())
+    .sort();
 
   const method = request.method.toUpperCase();
   const url = new URL(request.url);
   // pathname 是「已经过编码的」请求路径，与客户端签名时所用路径一致，
-  // 例如 /s3/my-bucket/i mages/a.jpg（空格为 %20）。
+  // 例如 /s3/my-bucket/images/a.jpg（空格为 %20）。
   const canonicalUri = url.pathname;
   const canonicalQuery = buildCanonicalQuery(url.search.slice(1));
 
@@ -103,7 +106,7 @@ export async function verifySignature(
     const value = canonicalHeaderValue(request.headers.get(name) ?? "");
     canonicalHeaders += `${name}:${value}\n`;
   }
-  const signedHeadersString = [...signedHeaders].sort().join(";");
+  const signedHeadersString = signedHeaders.join(";");
 
   // 读取 body 并对 PUT 做内容一致性校验
   const body = Buffer.from(await request.arrayBuffer());
