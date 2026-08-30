@@ -26,7 +26,13 @@ export async function GET(
     return new Response("Not Found", { status: 404 });
   }
 
-  const info = await head(blobKey);
+  let info: Awaited<ReturnType<typeof head>>;
+  try {
+    info = await head(blobKey);
+  } catch {
+    // @vercel/blob 的 head() 在对象不存在时会抛异常，而非返回 null
+    return new Response("Not Found", { status: 404 });
+  }
   if (!info) {
     return new Response("Not Found", { status: 404 });
   }

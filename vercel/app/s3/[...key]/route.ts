@@ -82,7 +82,12 @@ export async function GET(
     return s3Error("SignatureDoesNotMatch", (e as Error).message, 403);
   }
 
-  const info = await head(`${bucket}/${key}`);
+  let info: Awaited<ReturnType<typeof head>>;
+  try {
+    info = await head(`${bucket}/${key}`);
+  } catch {
+    return s3Error("NoSuchKey", "The specified key does not exist.", 404);
+  }
   if (!info) return s3Error("NoSuchKey", "The specified key does not exist.", 404);
 
   const range = request.headers.get("range");
@@ -123,7 +128,12 @@ export async function HEAD(
     return s3Error("SignatureDoesNotMatch", (e as Error).message, 403);
   }
 
-  const info = await head(`${bucket}/${key}`);
+  let info: Awaited<ReturnType<typeof head>>;
+  try {
+    info = await head(`${bucket}/${key}`);
+  } catch {
+    return s3Error("NoSuchKey", "The specified key does not exist.", 404);
+  }
   if (!info) return s3Error("NoSuchKey", "The specified key does not exist.", 404);
 
   return new Response(null, {
@@ -149,7 +159,12 @@ export async function DELETE(
     return s3Error("SignatureDoesNotMatch", (e as Error).message, 403);
   }
 
-  const info = await head(`${bucket}/${key}`);
+  let info: Awaited<ReturnType<typeof head>> | undefined;
+  try {
+    info = await head(`${bucket}/${key}`);
+  } catch {
+    // 对象不存在，删除幂等返回 204
+  }
   if (info) await del(info.url);
 
   return new Response(null, { status: 204 });
