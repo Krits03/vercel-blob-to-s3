@@ -182,7 +182,10 @@ export default function Home() {
           <a href="https://github.com/Krits03/vercel-blob-to-s3/" target="_blank" rel="noreferrer" style={{ color: "#0070f3", textDecoration: "none" }}>
             GitHub
           </a>
-          <span style={{ margin: "0 4px" }}>Made by Krits03</span>
+          <span style={{ margin: "0 4px" }}>Made by</span>
+          <a href="https://github.com/Krits03/" target="_blank" rel="noreferrer" style={{ color: "#0070f3", textDecoration: "none" }}>
+            Krits03
+          </a>
         </p>
       </footer>
     </main>
