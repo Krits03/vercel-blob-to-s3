@@ -189,7 +189,7 @@ app.get("/s3/*", async (c) => {
     return s3Error("InternalError", "S3 密钥未配置", 500);
   }
 
-  const segments = c.req.path.replace(/^\/s3\//, "").split("/").filter(Boolean);
+  const segments = decodeURIComponent(c.req.path.replace(/^\/s3\//, "")).split("/").filter(Boolean);
   const { bucket, key } = parseKey(segments);
   if (!key) return s3Error("NoSuchKey", "The specified key does not exist.", 404);
 
@@ -226,7 +226,7 @@ app.delete("/s3/*", async (c) => {
     return s3Error("InternalError", "S3 密钥未配置", 500);
   }
 
-  const segments = c.req.path.replace(/^\/s3\//, "").split("/").filter(Boolean);
+  const segments = decodeURIComponent(c.req.path.replace(/^\/s3\//, "")).split("/").filter(Boolean);
   const { bucket, key } = parseKey(segments);
   if (!key) return s3Error("InvalidArgument", "缺少对象 Key", 400);
 
