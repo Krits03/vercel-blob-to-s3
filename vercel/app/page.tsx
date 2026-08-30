@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 
 type UploadResult = {
   url: string;
@@ -8,6 +8,25 @@ type UploadResult = {
   contentType: string;
   size: number;
 };
+
+function CopyField({ value, label }: { value: string; label: string }) {
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <input
+        readOnly
+        title={label}
+        value={value}
+        style={{ flex: 1, padding: 6, fontSize: 12, borderRadius: 4, border: "1px solid #ddd", fontFamily: "monospace" }}
+      />
+      <button
+        onClick={() => navigator.clipboard.writeText(value)}
+        style={{ padding: "6px 12px", borderRadius: 4, border: "none", background: "#0070f3", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
+      >
+        复制
+      </button>
+    </div>
+  );
+}
 
 export default function Home() {
   const [token, setToken] = useState("");
@@ -17,6 +36,13 @@ export default function Home() {
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 绑定域名回调地址：自动拼接当前域名 + /api/download/{key}
+  const gatewayUrl = useMemo(() => {
+    if (!result) return "";
+    if (typeof window === "undefined") return result.url;
+    return `${window.location.origin}/api/download/${result.key}`;
+  }, [result]);
 
   async function uploadFile(file: File) {
     if (!token) {
@@ -136,24 +162,18 @@ export default function Home() {
           <img
             src={result.url}
             alt="preview"
-            style={{ maxWidth: "100%", borderRadius: 8, marginBottom: 8 }}
+            style={{ maxWidth: "100%", borderRadius: 8, marginBottom: 12 }}
           />
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              readOnly
-              value={result.url}
-              style={{ flex: 1, padding: 6, fontSize: 12, borderRadius: 4, border: "1px solid #ddd" }}
-            />
-            <button
-              onClick={() => navigator.clipboard.writeText(result.url)}
-              style={{ padding: "6px 12px", borderRadius: 4, border: "none", background: "#0070f3", color: "#fff", cursor: "pointer" }}
-            >
-              复制
-            </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div>
+              <div style={{ fontSize: 12, color: "#333", marginBottom: 4 }}>绑定域名回调（推荐用于 Twikoo S3_CDN_URL）</div>
+              <CopyField value={gatewayUrl} label="网关回调地址" />
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "#999", marginBottom: 4 }}>Vercel Blob 原始地址</div>
+              <CopyField value={result.url} label="Blob 原始地址" />
+            </div>
           </div>
-          <p style={{ fontSize: 12, color: "#999", marginTop: 8 }}>
-            下载: <code>/api/download/{result.key}</code>
-          </p>
         </div>
       )}
     </main>
